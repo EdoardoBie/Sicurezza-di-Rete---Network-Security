@@ -1,0 +1,6 @@
+{
+  "name": "Compendio Sicurezza Informatica",
+  "description": "Una presentazione interattiva e minimale sui principi della sicurezza informatica, phishing, malware e protocolli HTTPS.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
