@@ -664,50 +664,74 @@ const slides = [
 export default function App() {
   const [activeSlide, setActiveSlide] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isScrolling = useRef(false);
+  const isScrollingManually = useRef(false);
 
-  // Monitor scroll naturally
+  const snapToSlide = (index: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    
+    isScrollingManually.current = true;
+    const width = container.offsetWidth;
+    
+    container.scrollTo({
+      left: index * width,
+      behavior: 'smooth'
+    });
+    
+    setActiveSlide(index);
+    
+    // Clear the manual scroll flag after animation completes
+    setTimeout(() => {
+      isScrollingManually.current = false;
+    }, 700);
+  };
+
+  const nextSlide = () => {
+    if (activeSlide < slides.length - 1) {
+      snapToSlide(activeSlide + 1);
+    }
+  };
+
+  const prevSlide = () => {
+    if (activeSlide > 0) {
+      snapToSlide(activeSlide - 1);
+    }
+  };
+
+  // Monitor scroll to update activeSlide index
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     
     const handleScroll = () => {
-      if (isScrolling.current) return;
-      const width = container.clientWidth;
+      if (isScrollingManually.current) return;
+      const width = container.offsetWidth;
       if (width === 0) return;
       const index = Math.round(container.scrollLeft / width);
-      if (index !== activeSlide) setActiveSlide(index);
+      if (index !== activeSlide) {
+        setActiveSlide(index);
+      }
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [activeSlide]);
 
-  const snapToSlide = (index: number) => {
-    const container = containerRef.current;
-    if (!container) return;
-    isScrolling.current = true;
-    const width = container.clientWidth;
-    container.scrollTo({
-      left: index * width,
-      behavior: 'smooth'
-    });
-    setActiveSlide(index);
-    setTimeout(() => { isScrolling.current = false; }, 600);
-  };
-
-  const nextSlide = () => { if (activeSlide < slides.length - 1) snapToSlide(activeSlide + 1); };
-  const prevSlide = () => { if (activeSlide > 0) snapToSlide(activeSlide - 1); };
-
   // Keyboard navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') nextSlide();
-      if (e.key === 'ArrowLeft') prevSlide();
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        nextSlide();
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        prevSlide();
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  });
+  }, [activeSlide]); // Add dependency so nextSlide uses fresh state
 
   return (
     <div className="fixed inset-0 bg-[#FAFAFA] font-sans text-zinc-900 overflow-hidden flex flex-col selection:bg-blue-200">
@@ -715,20 +739,24 @@ export default function App() {
       {/* Horizontal Scroll Area */}
       <div 
         ref={containerRef}
-        className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar scroll-smooth"
+        className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
       >
-        {slides.map((renderSlide, idx) => renderSlide(idx))}
+        {slides.map((renderSlide, idx) => (
+          <div key={idx} className="w-full h-full flex-shrink-0 snap-center">
+            {renderSlide(idx)}
+          </div>
+        ))}
       </div>
 
       {/* Presentation HUD fixed bottom */}
-      <div className="fixed bottom-0 inset-x-0 h-24 flex items-center justify-between px-8 md:px-12 pointer-events-none">
+      <div className="fixed bottom-0 inset-x-0 h-24 flex items-center justify-between px-8 md:px-12 pointer-events-none z-[100]">
          <div className="flex gap-2 pointer-events-auto">
              {slides.map((_, i) => (
                 <button
                   key={i}
                   title={`Slide ${i + 1}`}
                   onClick={() => snapToSlide(i)}
-                  className={`h-2 transition-all rounded-full ${i === activeSlide ? 'w-8 bg-zinc-800' : 'w-2 bg-zinc-300 hover:bg-zinc-400'}`}
+                  className={`h-2 transition-all rounded-full p-0 cursor-pointer ${i === activeSlide ? 'w-8 bg-zinc-800' : 'w-2 bg-zinc-300 hover:bg-zinc-400'}`}
                 />
              ))}
          </div>
@@ -737,14 +765,16 @@ export default function App() {
            <button 
              onClick={prevSlide}
              disabled={activeSlide === 0}
-             className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-zinc-200 text-zinc-900 disabled:opacity-30 hover:bg-zinc-50 active:scale-95 transition-all shadow-sm"
+             aria-label="Slide precedente"
+             className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-zinc-200 text-zinc-900 disabled:opacity-20 hover:bg-zinc-50 active:scale-95 transition-all shadow-md cursor-pointer disabled:cursor-default"
            >
              <ArrowRight className="w-5 h-5 rotate-180" />
            </button>
            <button 
              onClick={nextSlide}
              disabled={activeSlide === slides.length - 1}
-             className="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-900 text-white disabled:opacity-30 hover:bg-zinc-800 active:scale-95 transition-all shadow-sm"
+             aria-label="Prossima slide"
+             className="w-12 h-12 flex items-center justify-center rounded-full bg-zinc-900 text-white disabled:opacity-20 hover:bg-zinc-800 active:scale-95 transition-all shadow-md cursor-pointer disabled:cursor-default"
            >
              <ArrowRight className="w-5 h-5" />
            </button>
