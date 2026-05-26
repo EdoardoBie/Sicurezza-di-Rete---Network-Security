@@ -16,10 +16,15 @@ import {
   KeyRound,
   FileSignature,
   FileDigit,
-  ArrowRight
+  ArrowRight,
+  Award,
+  HelpCircle,
+  CheckCircle2,
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 
-const SlideWrapper = ({ children, index }: { children: React.ReactNode, index: number }) => (
+const SlideWrapper = ({ children, index }: { children: React.ReactNode, index: number, key?: React.Key }) => (
   <section 
     className="w-full h-full flex-shrink-0 snap-center overflow-y-auto overflow-x-hidden no-scrollbar"
     id={`slide-${index}`}
@@ -251,6 +256,325 @@ const TLSHandshakeInteractive = () => {
     </div>
   )
 }
+
+interface Question {
+  question: string;
+  options: string[];
+  answerIndex: number;
+  explanation: string;
+}
+
+const QUIZ_QUESTIONS: Question[] = [
+  {
+    question: "Se ricevi un'email da un mittente plausibile (es. supporto@posta-azienda.it) che intima una sanzione entro 2 ore se non aggiorni le tue credenziali, qual è l'indicatore principale della minaccia?",
+    options: [
+      "La mancanza di loghi ufficiali ad alta risoluzione nel piè di pagina.",
+      "L'estrema urgenza temporale unita alla richiesta impulsiva di credenziali tramite link esterno.",
+      "Il mancato utilizzo di crittografia end-to-end sul canale e-mail dello smartphone.",
+      "La mancata approvazione dell'autorità di certificazione Root CA."
+    ],
+    answerIndex: 1,
+    explanation: "L'estrema urgenza e l'induzione d'ansia sono le tecniche cardine dei vettori di ingegneria sociale (phishing) per inibire la razionalità della vittima."
+  },
+  {
+    question: "Qual è la differenza fondamentale tra un malware Trojan Horse e un Worm?",
+    options: [
+      "Il Trojan esegue ARP Spoofing sul router locale, mentre il Worm agisce solo su server DNS.",
+      "Il Trojan crittografa in modo irreversibile i documenti sensibili, mentre il Worm serve solo a spiare la tastiera.",
+      "Il Trojan richiede tipicamente l'interazione umana o l'inganno per essere eseguito, mentre il Worm si diffonde via rete autonomamente sfruttando vulnerabilità.",
+      "Il Worm agisce in background a livello di kernel, laddove il Trojan è un file di puro testo in formato binario."
+    ],
+    answerIndex: 2,
+    explanation: "Il Worm è autosufficiente nella replicazione e propagazione tramite rete, mentre il Trojan ha bisogno che l'utente sia indotto ad avviarlo credendolo un software lecito."
+  },
+  {
+    question: "Nella pratica dei moderni Ransomware, cos'è la \"Doppia Estorsione\"?",
+    options: [
+      "Cifrare il sistema operativo ed anche tutti i backup fisici esterni collegati in sincrono.",
+      "Esfiltrare preventivamente i dati riservati minacciandone la pubblicazione sul Dark Web, oltre a cifrarli sul disco locale.",
+      "Chiedere il pagamento del riscatto due volte su wallet Bitcoin differenti della stessa organizzazione.",
+      "Inviare contemporaneamente una mail di phishing a due dipendenti dello stesso dipartimento contabilità."
+    ],
+    answerIndex: 1,
+    explanation: "Con la doppia estorsione, anche se la vittima ha backup offline e può ripristinare i sistemi senza pagare la decifratura, l'attaccante minaccia di svelare i dati riservati a concorrenti o al pubblico."
+  },
+  {
+    question: "Quale principio di sicurezza o protocollo viene violato da un attacco di ARP Spoofing (o ARP Poisoning) nelle reti LAN?",
+    options: [
+      "La crittografia asimmetrica a chiave pubblica dello standard X.509.",
+      "L'autenticità dei messaggi di associazione tra indirizzo IP e indirizzo MAC (Data Link Layer) che vengono accettati senza verifica.",
+      "L'integrità del record DNS custodito all'interno del server radice apicale.",
+      "L'handshake TLS del protocollo HTTPS sulla porta TCP 443."
+    ],
+    answerIndex: 1,
+    explanation: "Il protocollo ARP è per natura privo di autenticazione; accetta messaggi di risposta non richiesti associando l'IP ai MAC indicati dal mittente (anche ostile)."
+  },
+  {
+    question: "Se un attaccante esegue con successo un DNS Spoofing (Cache Poisoning), cosa accade quando l'utente digita l'URL corretto della sua banca?",
+    options: [
+      "La connessione fallisce istantaneamente mostrando l'errore standard di porta chiusa.",
+      "La tastiera viene catturata in modalità silente trasferendo i colpi di tasto (keylogging) all'attaccante.",
+      "Il browser riceve l'IP scorretto di un server controllato dall'attaccante, dirottando la vittima su una pagina clone speculare.",
+      "La Root CA interviene bloccando la navigazione per assenza di HMAC simmetrico."
+    ],
+    answerIndex: 2,
+    explanation: "Il DNS 'traduce' l'URL in IP. Se la cache è avvelenata, l'URL corretto porta all'IP fasullo dell'attaccante anziché a quello della banca."
+  },
+  {
+    question: "Nel protocollo HTTPS, come viene garantita specificamente l'Integrità dei Dati durante il transito (Pilastro dell'Integrity)?",
+    options: [
+      "Cifrando la connessione tramite una chiave segreta di sessione simmetrica ultra veloce.",
+      "Tramite l'utilizzo di codici di autenticazione basati su hash (HMAC) che rilevano all'istante l'alterazione di anche un singolo bit.",
+      "Attraverso l'invio del certificato digitale firmato da una Root CA approvata dal browser.",
+      "Nascondendo le estensioni reali dei pacchetti di rete sul router di terze parti."
+    ],
+    answerIndex: 1,
+    explanation: "I codici HMAC servono a garantire che se un pacchetto viene modificato o alterato nel viaggio (MITM), il destinatario se ne accorga invalidando la connessione."
+  },
+  {
+    question: "Perché l'architettura HTTPS combina l'utilizzo della Crittografia Asimmetrica con quella Simmetrica?",
+    options: [
+      "Perché quella simmetrica protegge i server Windows, mentre l'asimmetrica protegge i dispositivi mobile.",
+      "La crittografia asimmetrica scherma gli attacchi ARP Spoofing e quella simmetrica blocca il malware.",
+      "La crittografia asimmetrica (pesante) è usata solo nella fase iniziale di handshake per autenticare e scambiare un segreto; la simmetrica (molto veloce) protegge la mole principale del traffico dati successivo.",
+      "È un requisito imposto e richiesto per evitare la cifratura non autorizzata dei ransomware."
+    ],
+    answerIndex: 2,
+    explanation: "I calcoli asimmetrici richiedono notevoli risorse CPU. Vengono impiegati solo per creare il canale sicuro temporaneo e scambiare la chiave simmetrica, che invece richiede pochissimo carico di calcolo per cifrare volumi immensi di dati."
+  },
+  {
+    question: "Cos'è il \"Pre-Master Secret\" nell'Handshake TLS?",
+    options: [
+      "Una chiave d'emergenza installata fisicamente nei server centrali delle Certificate Authority.",
+      "Un elenco protetto contenente i codici PIN e le credenziali storiche del client in chiaro.",
+      "Un codice segreto casuale provvisorio generato dal browser e cifrato con la chiave pubblica del server, affinché solo quest'ultimo possa decifrarlo.",
+      "L'impronta hash finale sigillata che attesta il completamento della connessione."
+    ],
+    answerIndex: 2,
+    explanation: "Il browser genera il Pre-Master Secret, lo cifra con la chiave pubblica ricevuta nel certificato e lo invia. Solo la chiave privata del server (e nessun altro in ascolto sulla rete) può aprirlo per poi ricavare la chiave di sessione."
+  },
+  {
+    question: "Quale fondamentale servizio offre la Public Key Infrastructure (PKI) che la sola crittografia non può risolvere?",
+    options: [
+      "Garantisce l'assoluta invulnerabilità del client a spyware e furto di password locali.",
+      "Certifica la reale identità del server web, prevenendo la possibilità che un attaccante crei chiavi valide spacciandosi per qualcun altro.",
+      "Fornisce un meccanismo di scansione dei file .exe scaricati involontariamente in background.",
+      "Modifica automaticamente i parametri ARP del router per evitare l'intercettazione passiva."
+    ],
+    answerIndex: 1,
+    explanation: "Se la crittografia serve a coprire il messaggio, la PKI garantisce che stiamo parlando con la persona o il server esatto, convalidando digitalmente il possessore del dominio."
+  },
+  {
+    question: "Perché un browser moderno si fida di un certificato \"Foglia\" (End-Entity) installato su un sito, pur non conoscendolo direttamente?",
+    options: [
+      "Perché il browser interroga la propria lista locale contenente i certificati di tutti i siti mondiali disponibili aggiornati in tempo reale.",
+      "Perché è in grado di tracciare la Catena di Fiducia a ritroso verificando le firmas fino ad arrivare ad una Root CA autorizzata e presente nativamente nel proprio database di sistema.",
+      "Perché ogni certificato web contiene pre-autorizzati i permessi speciali di amministratore locale della porta 443.",
+      "Perché il protocollo HTTPS ignora la convalida formale X.509 se la connessione avviene in modalità Wi-Fi privata."
+    ],
+    answerIndex: 1,
+    explanation: "La fiducia viene propagata gerarchicamente. Se una Root CA (fidata nativamente dal browser) firma un'Intermediate CA, e quest'ultima firma la Foglia, il browser valida matematicamente l'intera catena di firme."
+  }
+];
+
+const InteractiveQuiz = () => {
+  const [currentQIndex, setCurrentQIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [wrongAnswers, setWrongAnswers] = useState<number[]>([]);
+
+  const handleOptionSelect = (index: number) => {
+    if (isAnswered) return;
+    setSelectedOption(index);
+  };
+
+  const handleConfirm = () => {
+    if (selectedOption === null) return;
+    setIsAnswered(true);
+    if (selectedOption === QUIZ_QUESTIONS[currentQIndex].answerIndex) {
+      setScore(s => s + 1);
+    } else {
+      setWrongAnswers(w => [...w, currentQIndex]);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentQIndex < QUIZ_QUESTIONS.length - 1) {
+      setCurrentQIndex(c => c + 1);
+      setSelectedOption(null);
+      setIsAnswered(false);
+    } else {
+      setQuizCompleted(true);
+    }
+  };
+
+  const handleReset = () => {
+    setCurrentQIndex(0);
+    setSelectedOption(null);
+    setScore(0);
+    setIsAnswered(false);
+    setQuizCompleted(false);
+    setWrongAnswers([]);
+  };
+
+  const currentQuestion = QUIZ_QUESTIONS[currentQIndex];
+
+  if (quizCompleted) {
+    let title = "";
+    let desc = "";
+    let feedbackColor = "";
+    
+    if (score <= 4) {
+      title = "Novizio della Sicurezza 🛡️";
+      desc = "Ti consigliamo di rileggere la presentazione per consolidare meglio le nozioni fondamentali di difesa.";
+      feedbackColor = "text-red-600 bg-red-50 border-red-200";
+    } else if (score <= 7) {
+      title = "Specialista Consapevole 🛡️🛡️";
+      desc = "Ottima base di partenza! Hai una buona consapevolezza ma fai attenzione alle sfumature più tecniche per blindare la tua conoscenza.";
+      feedbackColor = "text-amber-700 bg-amber-50 border-amber-200";
+    } else {
+      title = "Campione della Cyber Security 🏆";
+      desc = "Eccellente! Riconosci alla perfezione ogni minaccia e comprendi i meccanismi crittografici dello standard HTTPS.";
+      feedbackColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+    }
+
+    return (
+      <div className="bg-white border border-zinc-200 p-8 rounded-2xl max-w-3xl mx-auto space-y-8 shadow-md">
+        <div className="text-center space-y-4">
+           <Award className="w-16 h-16 text-blue-600 mx-auto animate-bounce" />
+           <h3 className="text-2xl font-light tracking-tight text-zinc-900">Risultato del Test di Autoverifica</h3>
+           <div className="text-5xl font-mono font-bold text-zinc-900 mt-2">
+             {score} <span className="text-zinc-300">/</span> {QUIZ_QUESTIONS.length}
+           </div>
+           <p className="text-sm text-zinc-500 font-mono">Punteggio ottenuto</p>
+        </div>
+
+        <div className={`p-6 rounded-xl border text-center ${feedbackColor}`}>
+           <h4 className="font-semibold text-lg mb-2">{title}</h4>
+           <p className="text-sm leading-relaxed">{desc}</p>
+        </div>
+
+        {wrongAnswers.length > 0 && (
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-zinc-500 tracking-wider uppercase">Argomenti da ripassare:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Array.from(new Set(wrongAnswers.map(idx => {
+                if (idx < 3) return "Ingegneria Sociale e Phishing";
+                if (idx < 6) return "Tassonomia e Funzionamento Malware";
+                if (idx < 8) return "Attacchi MITM (ARP, DNS, Evil Twin)";
+                return "Protocollo HTTPS, TLS Handshake e PKI";
+              }))).map((topic, i) => (
+                <div key={i} className="flex items-center gap-2 p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-sm font-medium text-zinc-700">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  {topic}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="pt-4 flex justify-center">
+           <button 
+             onClick={handleReset}
+             className="flex items-center gap-2 px-6 py-3 bg-zinc-900 text-white hover:bg-zinc-800 rounded-xl font-medium transition-colors shadow-sm cursor-pointer"
+           >
+             <RefreshCw className="w-4 h-4" /> Riprova il Test
+           </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-zinc-200 p-8 rounded-2xl max-w-3xl mx-auto space-y-6 shadow-md">
+      <div className="flex justify-between items-center pb-4 border-b border-zinc-100">
+         <span className="text-xs font-mono font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+           Domanda {currentQIndex + 1} di {QUIZ_QUESTIONS.length}
+         </span>
+         <span className="text-sm text-zinc-500 font-medium">Difficoltà: Media</span>
+      </div>
+
+      <h3 className="text-lg md:text-xl font-medium text-zinc-900 leading-relaxed">
+        {currentQuestion.question}
+      </h3>
+
+      <div className="space-y-3 pt-2">
+         {currentQuestion.options.map((option, idx) => {
+            let btnStyle = "bg-white border-zinc-200 hover:bg-zinc-50 hover:border-zinc-300 text-zinc-800";
+            let checkIcon = null;
+
+            if (selectedOption === idx) {
+              btnStyle = "bg-blue-50 border-blue-400 text-blue-900 ring-1 ring-blue-400";
+            }
+
+            if (isAnswered) {
+              if (idx === currentQuestion.answerIndex) {
+                btnStyle = "bg-emerald-50 border-emerald-400 text-emerald-900 ring-1 ring-emerald-400";
+                checkIcon = <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />;
+              } else if (selectedOption === idx) {
+                btnStyle = "bg-red-50 border-red-400 text-red-900 ring-1 ring-red-400";
+                checkIcon = <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />;
+              } else {
+                btnStyle = "bg-white border-zinc-100 text-zinc-400 opacity-60";
+              }
+            }
+
+            return (
+              <button
+                key={idx}
+                disabled={isAnswered}
+                onClick={() => handleOptionSelect(idx)}
+                className={`w-full text-left p-4 rounded-xl border flex justify-between items-center gap-4 transition-all ${btnStyle} ${!isAnswered ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <div className="flex items-start gap-3">
+                   <span className="font-mono text-zinc-400 mt-0.5">{String.fromCharCode(65 + idx)})</span>
+                   <span className="text-sm md:text-base leading-relaxed font-normal">{option}</span>
+                </div>
+                {checkIcon}
+              </button>
+            )
+         })}
+      </div>
+
+      {isAnswered && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-2 mt-4"
+        >
+          <div className="flex items-center gap-2 text-zinc-800 font-semibold text-sm">
+             <HelpCircle className="w-4 h-4 text-blue-500" /> Spiegazione tecnica:
+          </div>
+          <p className="text-sm text-zinc-600 leading-relaxed">
+             {currentQuestion.explanation}
+          </p>
+        </motion.div>
+      )}
+
+      <div className="flex justify-end pt-4 border-t border-zinc-100">
+         {!isAnswered ? (
+           <button
+             disabled={selectedOption === null}
+             onClick={handleConfirm}
+             className="px-6 py-3 bg-zinc-900 text-white disabled:opacity-30 hover:bg-zinc-800 rounded-xl font-medium transition-colors shadow-sm cursor-pointer disabled:cursor-default"
+           >
+             Conferma Risposta
+           </button>
+         ) : (
+           <button
+             onClick={handleNext}
+             className="px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+           >
+             {currentQIndex === QUIZ_QUESTIONS.length - 1 ? "Vedi Risultato Finale" : "Prossima Domanda"}
+             <ArrowRight className="w-4 h-4" />
+           </button>
+         )}
+      </div>
+    </div>
+  )
+};
 
 const slides = [
   // 1. Cover
@@ -656,6 +980,16 @@ const slides = [
               <li>La <b>Root Authority Corp</b> è presente nel Database nativo del browser. Valida! Le date e domini combaciano. Attiva lucchetto HTTPS e chiave di sessione.</li>
            </ol>
         </div>
+      </div>
+    </SlideWrapper>
+  ),
+
+  // 15. Quiz Interattivo
+  (idx: number) => (
+    <SlideWrapper index={idx} key={idx}>
+      <Headings title="5. Quiz di Autoverifica" subtitle="Metti alla prova le tue competenze con 10 domande mirate di livello medio" />
+      <div className="mt-2 pb-12">
+        <InteractiveQuiz />
       </div>
     </SlideWrapper>
   )
