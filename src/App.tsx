@@ -370,14 +370,47 @@ const QUIZ_QUESTIONS: Question[] = [
       "Perché il browser interroga la propria lista locale contenente i certificati di tutti i siti mondiali disponibili aggiornati in tempo reale.",
       "Perché è in grado di tracciare la Catena di Fiducia a ritroso verificando le firmas fino ad arrivare ad una Root CA autorizzata e presente nativamente nel proprio database di sistema.",
       "Perché ogni certificato web contiene pre-autorizzati i permessi speciali di amministratore locale della porta 443.",
-      "Perché il protocollo HTTPS ignora la convalida formale X.509 se la connessione avviene in modalità Wi-Fi privata."
+      "Perché il protocollo HTTPS ignora la convalida formale X.509 si la connessione avviene in modalità Wi-Fi privata."
     ],
     answerIndex: 1,
     explanation: "La fiducia viene propagata gerarchicamente. Se una Root CA (fidata nativamente dal browser) firma un'Intermediate CA, e quest'ultima firma la Foglia, il browser valida matematicamente l'intera catena di firme."
   }
 ];
 
+interface ShuffledQuestion {
+  question: string;
+  options: { text: string; isCorrect: boolean }[];
+  explanation: string;
+  originalQuestionIndex: number;
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const prepareQuestions = (): ShuffledQuestion[] => {
+  return QUIZ_QUESTIONS.map((q, originalIdx) => {
+    const mappedOptions = q.options.map((optionText, optIdx) => ({
+      text: optionText,
+      isCorrect: optIdx === q.answerIndex
+    }));
+    const shuffledOptions = shuffleArray(mappedOptions);
+    return {
+      question: q.question,
+      options: shuffledOptions,
+      explanation: q.explanation,
+      originalQuestionIndex: originalIdx
+    };
+  });
+};
+
 const InteractiveQuiz = () => {
+  const [shuffledQuestions, setShuffledQuestions] = useState<ShuffledQuestion[]>(() => prepareQuestions());
   const [currentQIndex, setCurrentQIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [score, setScore] = useState(0);
@@ -393,15 +426,16 @@ const InteractiveQuiz = () => {
   const handleConfirm = () => {
     if (selectedOption === null) return;
     setIsAnswered(true);
-    if (selectedOption === QUIZ_QUESTIONS[currentQIndex].answerIndex) {
+    const currentQ = shuffledQuestions[currentQIndex];
+    if (currentQ?.options[selectedOption]?.isCorrect) {
       setScore(s => s + 1);
     } else {
-      setWrongAnswers(w => [...w, currentQIndex]);
+      setWrongAnswers(w => [...w, currentQ.originalQuestionIndex]);
     }
   };
 
   const handleNext = () => {
-    if (currentQIndex < QUIZ_QUESTIONS.length - 1) {
+    if (currentQIndex < shuffledQuestions.length - 1) {
       setCurrentQIndex(c => c + 1);
       setSelectedOption(null);
       setIsAnswered(false);
@@ -411,6 +445,7 @@ const InteractiveQuiz = () => {
   };
 
   const handleReset = () => {
+    setShuffledQuestions(prepareQuestions());
     setCurrentQIndex(0);
     setSelectedOption(null);
     setScore(0);
@@ -419,7 +454,9 @@ const InteractiveQuiz = () => {
     setWrongAnswers([]);
   };
 
-  const currentQuestion = QUIZ_QUESTIONS[currentQIndex];
+  const currentQuestion = shuffledQuestions[currentQIndex];
+
+  if (!currentQuestion) return null;
 
   if (quizCompleted) {
     let title = "";
@@ -446,7 +483,7 @@ const InteractiveQuiz = () => {
            <Award className="w-16 h-16 text-blue-600 mx-auto animate-bounce" />
            <h3 className="text-2xl font-light tracking-tight text-zinc-900">Risultato del Test di Autoverifica</h3>
            <div className="text-5xl font-mono font-bold text-zinc-900 mt-2">
-             {score} <span className="text-zinc-300">/</span> {QUIZ_QUESTIONS.length}
+             {score} <span className="text-zinc-300">/</span> {shuffledQuestions.length}
            </div>
            <p className="text-sm text-zinc-500 font-mono">Punteggio ottenuto</p>
         </div>
@@ -491,7 +528,7 @@ const InteractiveQuiz = () => {
     <div className="bg-white border border-zinc-200 p-8 rounded-2xl max-w-3xl mx-auto space-y-6 shadow-md">
       <div className="flex justify-between items-center pb-4 border-b border-zinc-100">
          <span className="text-xs font-mono font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-           Domanda {currentQIndex + 1} di {QUIZ_QUESTIONS.length}
+           Domanda {currentQIndex + 1} di {shuffledQuestions.length}
          </span>
          <span className="text-sm text-zinc-500 font-medium">Difficoltà: Media</span>
       </div>
@@ -510,7 +547,7 @@ const InteractiveQuiz = () => {
             }
 
             if (isAnswered) {
-              if (idx === currentQuestion.answerIndex) {
+              if (option.isCorrect) {
                 btnStyle = "bg-emerald-50 border-emerald-400 text-emerald-900 ring-1 ring-emerald-400";
                 checkIcon = <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />;
               } else if (selectedOption === idx) {
@@ -530,7 +567,7 @@ const InteractiveQuiz = () => {
               >
                 <div className="flex items-start gap-3">
                    <span className="font-mono text-zinc-400 mt-0.5">{String.fromCharCode(65 + idx)})</span>
-                   <span className="text-sm md:text-base leading-relaxed font-normal">{option}</span>
+                   <span className="text-sm md:text-base leading-relaxed font-normal">{option.text}</span>
                 </div>
                 {checkIcon}
               </button>
@@ -567,7 +604,7 @@ const InteractiveQuiz = () => {
              onClick={handleNext}
              className="px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
            >
-             {currentQIndex === QUIZ_QUESTIONS.length - 1 ? "Vedi Risultato Finale" : "Prossima Domanda"}
+             {currentQIndex === shuffledQuestions.length - 1 ? "Vedi Risultato Finale" : "Prossima Domanda"}
              <ArrowRight className="w-4 h-4" />
            </button>
          )}
